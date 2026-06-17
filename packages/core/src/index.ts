@@ -44,6 +44,7 @@ export { asObjectId, isObjectId, OBJECT_ID_LENGTH, type ObjectId } from "./objec
 
 // --- Errors ---
 export {
+  CheckoutError,
   CorruptObjectError,
   GitVizError,
   InvalidObjectError,

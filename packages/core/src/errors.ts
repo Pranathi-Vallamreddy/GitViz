@@ -66,3 +66,17 @@ export class RepositoryError extends GitVizError {}
 
 /** Thrown when an operation needs a repository but the path isn't one. */
 export class NotARepositoryError extends GitVizError {}
+
+/**
+ * Thrown when a checkout cannot proceed — the target doesn't resolve to a
+ * commit, or it would overwrite uncommitted local changes (see `paths`).
+ */
+export class CheckoutError extends GitVizError {
+  constructor(
+    message: string,
+    /** Working-tree paths that blocked the checkout, if applicable. */
+    readonly paths: readonly string[] = [],
+  ) {
+    super(message);
+  }
+}

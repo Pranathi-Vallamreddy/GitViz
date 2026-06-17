@@ -2,17 +2,19 @@ import { existsSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-import { NotARepositoryError, RepositoryError } from "../errors.js";
-import type { ObjectId } from "../object-id.js";
+import { CheckoutError, NotARepositoryError, RepositoryError } from "../errors.js";
+import { isObjectId, type ObjectId } from "../object-id.js";
 import { createBlob } from "../objects/blob.js";
 import { createCommit } from "../objects/commit.js";
+import { computeObjectId } from "../objects/object.js";
 import { createTree } from "../objects/tree.js";
 import type { Author, Commit, TreeEntry } from "../objects/types.js";
-import { DEFAULT_BRANCH } from "../refs/ref-name.js";
+import { branchRefName, DEFAULT_BRANCH, isValidBranchName } from "../refs/ref-name.js";
 import { FileSystemRefStore } from "../refs/fs-ref-store.js";
 import type { RefStore } from "../refs/ref-store.js";
 import { FileSystemObjectStore } from "../store/fs-object-store.js";
 import type { ObjectStore } from "../store/object-store.js";
+import { writeFileAtomic } from "../util/fs.js";
 
 /** Directory name that holds a repository's metadata, like Git's `.git`. */
 export const GITVIZ_DIR_NAME = ".gitviz";
@@ -21,6 +23,20 @@ export const GITVIZ_DIR_NAME = ".gitviz";
 export interface CommitLogEntry {
   readonly id: ObjectId;
   readonly commit: Commit;
+}
+
+/** Options for {@link Repository.checkout}. */
+export interface CheckoutOptions {
+  /** Discard conflicting local changes instead of refusing the checkout. */
+  readonly force?: boolean;
+}
+
+/** Outcome of a checkout: the commit now in the working tree and how HEAD moved. */
+export interface CheckoutResult {
+  readonly commit: ObjectId;
+  /** The branch checked out, or undefined when HEAD is now detached. */
+  readonly branch?: string;
+  readonly detached: boolean;
 }
 
 /**
@@ -196,5 +212,208 @@ export class Repository {
         (a.id < b.id ? 1 : a.id > b.id ? -1 : 0),
     );
     return entries;
+  }
+
+  /**
+   * Checks out a branch or commit: materializes its tree into the working
+   * directory and updates HEAD.
+   *
+   *  - A **branch name** moves HEAD symbolically (`HEAD → refs/heads/<branch>`),
+   *    so subsequent commits advance that branch.
+   *  - A **commit id** detaches HEAD onto that commit.
+   *
+   * Materialization is the inverse of `writeTree`: every blob in the target tree
+   * is written (creating directories as needed), and every file that the current
+   * commit tracked but the target does not is removed, then newly empty
+   * directories are pruned. Untracked files are left untouched.
+   *
+   * Safety: unless `force` is set, the checkout refuses (throwing
+   * {@link CheckoutError}) if it would overwrite or remove uncommitted local
+   * changes, listing the offending paths.
+   */
+  async checkout(target: string, options: CheckoutOptions = {}): Promise<CheckoutResult> {
+    const resolved = await this.resolveCheckoutTarget(target);
+
+    const targetCommit = await this.objects.get(resolved.commit);
+    if (targetCommit.type !== "commit") {
+      throw new CheckoutError(`Object ${resolved.commit} is not a commit`);
+    }
+    const targetFiles = await this.treeToFileMap(targetCommit.tree);
+
+    // Files tracked by the current commit — what we are allowed to remove.
+    const currentFiles = await this.currentTrackedFiles();
+
+    if (!options.force) {
+      await this.assertNoOverwrites(currentFiles, targetFiles);
+    }
+
+    // Remove files the current commit tracked that the target does not have.
+    for (const relPath of currentFiles.keys()) {
+      if (!targetFiles.has(relPath)) {
+        await fs.rm(this.toAbsolute(relPath), { force: true });
+      }
+    }
+
+    // Write (overwrite) every file in the target tree.
+    for (const [relPath, blobId] of targetFiles) {
+      const blob = await this.objects.get(blobId);
+      if (blob.type !== "blob") {
+        throw new CheckoutError(`Object ${blobId} is not a blob`);
+      }
+      await writeFileAtomic(this.toAbsolute(relPath), blob.data);
+    }
+
+    await this.removeEmptyDirs(this.workdir);
+
+    // Update HEAD last, once the working tree is consistent.
+    if (resolved.branch !== undefined) {
+      await this.refs.setHeadToBranch(resolved.branch);
+      return { commit: resolved.commit, branch: resolved.branch, detached: false };
+    }
+    await this.refs.setHeadDetached(resolved.commit);
+    return { commit: resolved.commit, detached: true };
+  }
+
+  /** Resolves a checkout target (branch name preferred, else commit id). */
+  private async resolveCheckoutTarget(
+    target: string,
+  ): Promise<{ commit: ObjectId; branch?: string }> {
+    if (isValidBranchName(target)) {
+      const branchCommit = await this.refs.resolve(branchRefName(target));
+      if (branchCommit) {
+        return { commit: branchCommit, branch: target };
+      }
+    }
+    if (isObjectId(target) && (await this.objects.has(target))) {
+      return { commit: target };
+    }
+    throw new CheckoutError(`'${target}' did not match any branch or commit`);
+  }
+
+  /** The set of files tracked by the commit HEAD currently resolves to. */
+  private async currentTrackedFiles(): Promise<Map<string, ObjectId>> {
+    const commitId = await this.refs.resolveHead();
+    if (!commitId) return new Map();
+    const commit = await this.objects.get(commitId);
+    if (commit.type !== "commit") {
+      throw new RepositoryError(`HEAD does not point at a commit: ${commitId}`);
+    }
+    return this.treeToFileMap(commit.tree);
+  }
+
+  /** Flattens a tree (recursively) into a map of relative path → blob id. */
+  private async treeToFileMap(treeId: ObjectId): Promise<Map<string, ObjectId>> {
+    const files = new Map<string, ObjectId>();
+
+    const walk = async (id: ObjectId, prefix: string): Promise<void> => {
+      const object = await this.objects.get(id);
+      if (object.type !== "tree") {
+        throw new RepositoryError(`Expected a tree, found ${object.type}: ${id}`);
+      }
+      for (const entry of object.entries) {
+        const relPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+        if (entry.type === "blob") {
+          files.set(relPath, entry.hash);
+        } else {
+          await walk(entry.hash, relPath);
+        }
+      }
+    };
+
+    await walk(treeId, "");
+    return files;
+  }
+
+  /** Hashes the current working tree into a map of relative path → blob id. */
+  private async scanWorkdir(): Promise<Map<string, ObjectId>> {
+    const files = new Map<string, ObjectId>();
+
+    const walk = async (dir: string, prefix: string): Promise<void> => {
+      const dirents = await fs.readdir(dir, { withFileTypes: true });
+      for (const dirent of dirents) {
+        if (dir === this.workdir && dirent.name === GITVIZ_DIR_NAME) continue;
+        const full = path.join(dir, dirent.name);
+        const relPath = prefix ? `${prefix}/${dirent.name}` : dirent.name;
+        if (dirent.isDirectory()) {
+          await walk(full, relPath);
+        } else if (dirent.isFile()) {
+          const data = await fs.readFile(full);
+          files.set(relPath, computeObjectId(createBlob(data)));
+        }
+      }
+    };
+
+    await walk(this.workdir, "");
+    return files;
+  }
+
+  /**
+   * Refuses the checkout if it would clobber uncommitted work. A path conflicts
+   * when the working copy differs from the current commit (a local change) *and*
+   * the checkout would change that path again — discarding the change.
+   */
+  private async assertNoOverwrites(
+    currentFiles: ReadonlyMap<string, ObjectId>,
+    targetFiles: ReadonlyMap<string, ObjectId>,
+  ): Promise<void> {
+    const working = await this.scanWorkdir();
+    const conflicts: string[] = [];
+
+    // Only paths the checkout touches (writes or removes) can conflict.
+    for (const relPath of new Set([...currentFiles.keys(), ...targetFiles.keys()])) {
+      const committed = currentFiles.get(relPath);
+      const desired = targetFiles.get(relPath);
+      const actual = working.get(relPath);
+
+      const locallyModified = actual !== committed;
+      const checkoutWouldChange = desired !== actual;
+      if (locallyModified && checkoutWouldChange) {
+        conflicts.push(relPath);
+      }
+    }
+
+    if (conflicts.length > 0) {
+      conflicts.sort();
+      throw new CheckoutError(
+        `Your local changes to the following files would be overwritten by checkout:\n${conflicts
+          .map((p) => `  ${p}`)
+          .join("\n")}`,
+        conflicts,
+      );
+    }
+  }
+
+  /** Resolves a repo-relative ("/"-separated) path to an absolute OS path. */
+  private toAbsolute(relPath: string): string {
+    return path.join(this.workdir, ...relPath.split("/"));
+  }
+
+  /**
+   * Recursively removes directories that became empty, never touching the
+   * working-directory root or `.gitviz`. Returns whether `dir` itself is now
+   * empty (so a caller can remove it).
+   */
+  private async removeEmptyDirs(dir: string): Promise<boolean> {
+    const dirents = await fs.readdir(dir, { withFileTypes: true });
+    let remaining = 0;
+
+    for (const dirent of dirents) {
+      if (dir === this.workdir && dirent.name === GITVIZ_DIR_NAME) {
+        remaining++;
+        continue;
+      }
+      const full = path.join(dir, dirent.name);
+      if (dirent.isDirectory()) {
+        if (await this.removeEmptyDirs(full)) {
+          await fs.rmdir(full);
+        } else {
+          remaining++;
+        }
+      } else {
+        remaining++;
+      }
+    }
+
+    return remaining === 0 && dir !== this.workdir;
   }
 }

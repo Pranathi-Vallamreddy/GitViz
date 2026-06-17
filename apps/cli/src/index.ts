@@ -3,18 +3,12 @@ import { CORE_VERSION } from "@gitviz/core";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 
-import { commitCommand, initCommand, logCommand } from "./commands.js";
+import { checkoutCommand, commitCommand, initCommand, logCommand } from "./commands.js";
 
 /**
- * `gitviz` CLI.
- *
- * `init`, `commit`, and `log` are implemented on top of @gitviz/core. The
- * remaining commands (checkout/branch management) are stubbed until later phases.
+ * `gitviz` CLI — `init`, `commit`, `log`, and `checkout`, all implemented on top
+ * of @gitviz/core.
  */
-
-const notImplemented = (command: string) => () => {
-  console.log(`gitviz: '${command}' is not implemented yet.`);
-};
 
 await yargs(hideBin(process.argv))
   .scriptName("gitviz")
@@ -35,14 +29,21 @@ await yargs(hideBin(process.argv))
   .command("log", "Show commit history (DAG traversal from HEAD)", {}, () => logCommand())
   .command(
     "checkout <ref>",
-    "Materialize a commit's tree into the working directory",
+    "Restore a branch or commit into the working directory and move HEAD",
     (y) =>
-      y.positional("ref", {
-        describe: "Commit hash or branch name",
-        type: "string",
-        demandOption: true,
-      }),
-    notImplemented("checkout"),
+      y
+        .positional("ref", {
+          describe: "Branch name or commit hash",
+          type: "string",
+          demandOption: true,
+        })
+        .option("force", {
+          alias: "f",
+          describe: "Discard local changes that would be overwritten",
+          type: "boolean",
+          default: false,
+        }),
+    (argv) => checkoutCommand(argv.ref, argv.force),
   )
   .version(CORE_VERSION)
   .demandCommand(1, "You need to specify a command. Run with --help to see options.")

@@ -44,6 +44,18 @@ export function commitCommand(message: string): Promise<void> {
   });
 }
 
+export function checkoutCommand(ref: string, force: boolean): Promise<void> {
+  return run(async () => {
+    const repo = Repository.open(process.cwd());
+    const result = await repo.checkout(ref, { force });
+    if (result.detached) {
+      console.log(`HEAD is now at ${result.commit.slice(0, 10)} (detached)`);
+    } else {
+      console.log(`Switched to branch '${result.branch}'`);
+    }
+  });
+}
+
 export function logCommand(): Promise<void> {
   return run(async () => {
     const repo = Repository.open(process.cwd());
