@@ -34,3 +34,16 @@ export class InvalidObjectError extends GitVizError {}
  * Indicates corruption or a format mismatch.
  */
 export class ObjectParseError extends GitVizError {}
+
+/** Thrown by an object store when the requested object id is not present. */
+export class ObjectNotFoundError extends GitVizError {
+  constructor(public readonly objectId: string) {
+    super(`Object not found: ${objectId}`);
+  }
+}
+
+/**
+ * Thrown when a stored object fails to decode or its recomputed hash does not
+ * match the id it was stored under — i.e. the bytes on disk are corrupt.
+ */
+export class CorruptObjectError extends GitVizError {}

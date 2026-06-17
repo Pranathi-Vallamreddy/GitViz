@@ -19,6 +19,9 @@ coverage/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Local tooling configuration (not tracked)
+.claude/
 .DS_Store
 Thumbs.db
 

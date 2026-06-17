@@ -17,4 +17,12 @@ export type {
 export { createBlob, deserializeBlob, serializeBlob } from "./blob.js";
 export { createTree, deserializeTree, serializeTree } from "./tree.js";
 export { createCommit, deserializeCommit, serializeCommit } from "./commit.js";
-export { computeObjectId, deserialize, frameObject, serialize } from "./object.js";
+export {
+  computeObjectId,
+  decodeObject,
+  deserialize,
+  frameObject,
+  isGitVizObjectType,
+  parseFrame,
+  serialize,
+} from "./object.js";
