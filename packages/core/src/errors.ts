@@ -60,3 +60,9 @@ export class InvalidRefNameError extends GitVizError {
  * exceeds the maximum depth.
  */
 export class RefResolutionError extends GitVizError {}
+
+/** Thrown for repository-level failures (e.g. initializing one that exists). */
+export class RepositoryError extends GitVizError {}
+
+/** Thrown when an operation needs a repository but the path isn't one. */
+export class NotARepositoryError extends GitVizError {}

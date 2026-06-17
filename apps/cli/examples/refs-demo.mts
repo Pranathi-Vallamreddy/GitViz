@@ -58,7 +58,9 @@ console.log(`     resolveHead(): ${(await refs.resolveHead())?.slice(0, 10)}\n`)
 const c2 = await commit("second commit", [c1]);
 await refs.setBranch("main", c2);
 console.log(`3  committed ${c2.slice(0, 10)} and advanced main`);
-console.log(`     resolveHead(): ${(await refs.resolveHead())?.slice(0, 10)}  (HEAD followed)\n`);
+console.log(
+  `     resolveHead(): ${(await refs.resolveHead())?.slice(0, 10)}  (HEAD followed)\n`,
+);
 
 // 4. Create a feature branch off the current commit and switch HEAD to it.
 const head = await refs.resolveHead();
@@ -76,7 +78,9 @@ console.log(`     resolveHead():  ${(await refs.resolveHead())?.slice(0, 10)}\n`
 
 // 6. Show the raw on-disk files.
 console.log("6  on disk:");
-console.log(`     HEAD             -> ${readFileSync(resolve(gitvizDir, "HEAD"), "utf8").trim()}`);
+console.log(
+  `     HEAD             -> ${readFileSync(resolve(gitvizDir, "HEAD"), "utf8").trim()}`,
+);
 console.log(
   `     refs/heads/main  -> ${readFileSync(resolve(gitvizDir, "refs/heads/main"), "utf8").trim()}`,
 );
