@@ -1,0 +1,25 @@
+{
+  "name": "@gitviz/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The GitViz version-control engine: content-addressable object store, commit DAG, refs, diff. Framework-free.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@gitviz/shared": "workspace:*"
+  }
+}

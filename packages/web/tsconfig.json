@@ -1,0 +1,20 @@
+{
+  // Standalone (non-composite) config: Vite owns the build/emit, `tsc --noEmit`
+  // is used purely for type-checking. Uses bundler module resolution so imports
+  // resolve the same way Vite resolves them.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "incremental": false,
+    "noEmit": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
+    "types": ["node"]
+  },
+  "include": ["src", "vite.config.ts"]
+}

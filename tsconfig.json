@@ -1,0 +1,13 @@
+{
+  // Solution-style root config: no files of its own, just references to every
+  // buildable TypeScript project. `tsc -b` walks these in dependency order.
+  // `packages/web` is excluded here because it uses bundler module resolution
+  // (Vite) and type-checks itself via its own `tsc -b` in its build script.
+  "files": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/core" },
+    { "path": "./packages/server" },
+    { "path": "./apps/cli" }
+  ]
+}

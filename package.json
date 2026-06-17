@@ -1,0 +1,41 @@
+{
+  "name": "gitviz",
+  "version": "0.0.0",
+  "private": true,
+  "description": "GitViz — a Git-inspired visual version control system (content-addressable store, commit DAG, branching, interactive graph UI).",
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r run build",
+    "dev:server": "pnpm --filter @gitviz/server run dev",
+    "dev:web": "pnpm --filter @gitviz/web run dev",
+    "cli": "pnpm --filter @gitviz/cli run start --",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "clean": "pnpm -r exec rimraf dist .turbo tsconfig.tsbuildinfo"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.10.5",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^2.1.8"
+  }
+}

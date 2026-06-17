@@ -1,0 +1,25 @@
+{
+  "name": "@gitviz/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The `gitviz` command-line interface — a thin wrapper around @gitviz/core.",
+  "bin": {
+    "gitviz": "./dist/index.js"
+  },
+  "scripts": {
+    "start": "tsx --conditions development src/index.ts",
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@gitviz/core": "workspace:*",
+    "@gitviz/shared": "workspace:*",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@types/yargs": "^17.0.33",
+    "tsx": "^4.19.2"
+  }
+}

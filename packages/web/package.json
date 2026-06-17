@@ -1,0 +1,29 @@
+{
+  "name": "@gitviz/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "GitViz web client (React + Vite): commit-graph visualization, repository explorer, object inspector.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist node_modules/.vite tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@gitviz/shared": "workspace:*",
+    "@primer/octicons-react": "^19.14.0",
+    "@primer/react": "^36.27.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "styled-components": "^5.3.11"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/styled-components": "^5.1.34",
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.7"
+  }
+}
