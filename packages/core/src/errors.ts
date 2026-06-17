@@ -47,3 +47,16 @@ export class ObjectNotFoundError extends GitVizError {
  * match the id it was stored under — i.e. the bytes on disk are corrupt.
  */
 export class CorruptObjectError extends GitVizError {}
+
+/** Thrown when a ref or branch name violates the naming rules. */
+export class InvalidRefNameError extends GitVizError {
+  constructor(name: string, reason: string) {
+    super(`Invalid ref name "${name}": ${reason}`);
+  }
+}
+
+/**
+ * Thrown when a symbolic ref cannot be resolved — e.g. the chain is cyclic or
+ * exceeds the maximum depth.
+ */
+export class RefResolutionError extends GitVizError {}

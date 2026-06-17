@@ -11,10 +11,12 @@
  *
  * Phase 1b adds a content-addressable **object store** that persists those
  * objects to disk (Git-style loose objects, with automatic deduplication).
+ * Phase 2 adds **refs and HEAD** — branch pointers and the symbolic current-branch
+ * reference layered over the store.
  *
- * Still to come: refs/HEAD, history traversal, diff. The engine deliberately
- * depends on no web or server framework so it can be unit-tested in isolation
- * and driven equally by the CLI and the HTTP API.
+ * Still to come: history traversal, diff. The engine deliberately depends on no
+ * web or server framework so it can be unit-tested in isolation and driven
+ * equally by the CLI and the HTTP API.
  */
 
 import { GITVIZ_VERSION } from "@gitviz/shared";
@@ -28,6 +30,9 @@ export * from "./objects/index.js";
 // --- Object store ---
 export * from "./store/index.js";
 
+// --- Refs & HEAD ---
+export * from "./refs/index.js";
+
 // --- Hashing & identity ---
 export { hashBytes, HASH_ALGORITHM } from "./hash.js";
 export { asObjectId, isObjectId, OBJECT_ID_LENGTH, type ObjectId } from "./object-id.js";
@@ -38,6 +43,8 @@ export {
   GitVizError,
   InvalidObjectError,
   InvalidObjectIdError,
+  InvalidRefNameError,
   ObjectNotFoundError,
   ObjectParseError,
+  RefResolutionError,
 } from "./errors.js";

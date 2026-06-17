@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -10,6 +9,7 @@ import { hashBytes } from "../hash.js";
 import { asObjectId, type ObjectId } from "../object-id.js";
 import { decodeObject, frameObject, serialize } from "../objects/object.js";
 import type { GitVizObject } from "../objects/types.js";
+import { writeFileAtomic } from "../util/fs.js";
 import type { ObjectStore } from "./object-store.js";
 
 const deflate = promisify(deflateCb);
@@ -68,16 +68,18 @@ export class FileSystemObjectStore implements ObjectStore {
   }
 
   /** Resolves the on-disk path of the object with the given id. */
-  private objectPath(id: ObjectId): { dir: string; file: string } {
-    const dir = path.join(this.objectsDir, id.slice(0, FANOUT_PREFIX_LENGTH));
-    const file = path.join(dir, id.slice(FANOUT_PREFIX_LENGTH));
-    return { dir, file };
+  private objectPath(id: ObjectId): string {
+    return path.join(
+      this.objectsDir,
+      id.slice(0, FANOUT_PREFIX_LENGTH),
+      id.slice(FANOUT_PREFIX_LENGTH),
+    );
   }
 
   async put(object: GitVizObject): Promise<ObjectId> {
     const framed = frameObject(object.type, serialize(object));
     const id = hashBytes(framed);
-    const { dir, file } = this.objectPath(id);
+    const file = this.objectPath(id);
 
     // Deduplicate: identical content hashes to this same path, so if it already
     // exists there is nothing to write.
@@ -86,31 +88,14 @@ export class FileSystemObjectStore implements ObjectStore {
     }
 
     const compressed = await deflate(framed);
-    await fs.mkdir(dir, { recursive: true });
-
-    // Write to a temp file then rename, so a reader never observes a partially
-    // written object and concurrent writers cannot corrupt each other.
-    const tmp = path.join(dir, `tmp-${randomUUID()}`);
-    await fs.writeFile(tmp, compressed);
-    try {
-      await fs.rename(tmp, file);
-    } catch (error) {
-      // A concurrent writer may have created the (identical) object first. On
-      // Windows rename onto an existing file throws; treat that as success.
-      if (existsSync(file)) {
-        await fs.rm(tmp, { force: true });
-      } else {
-        await fs.rm(tmp, { force: true });
-        throw error;
-      }
-    }
+    await writeFileAtomic(file, compressed);
 
     return id;
   }
 
   async get(id: ObjectId): Promise<GitVizObject> {
     asObjectId(id);
-    const { file } = this.objectPath(id);
+    const file = this.objectPath(id);
 
     let compressed: Buffer;
     try {
@@ -145,6 +130,6 @@ export class FileSystemObjectStore implements ObjectStore {
 
   async has(id: ObjectId): Promise<boolean> {
     asObjectId(id);
-    return existsSync(this.objectPath(id).file);
+    return existsSync(this.objectPath(id));
   }
 }
