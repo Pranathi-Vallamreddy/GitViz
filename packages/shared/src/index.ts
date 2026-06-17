@@ -14,3 +14,6 @@ export const GITVIZ_VERSION = "0.0.0";
 
 /** The kinds of objects stored in the content-addressable store. */
 export type GitVizObjectType = "blob" | "tree" | "commit";
+
+// API wire contract (server <-> web).
+export * from "./dto.js";

@@ -25,6 +25,39 @@ export interface CommitLogEntry {
   readonly commit: Commit;
 }
 
+/**
+ * The state of HEAD, used by the read model:
+ *  - `branch`   — attached to a branch with at least one commit.
+ *  - `detached` — pointing directly at a commit.
+ *  - `unborn`   — attached to a branch that has no commits yet.
+ */
+export type HeadState =
+  | { readonly kind: "branch"; readonly branch: string; readonly commit: ObjectId }
+  | { readonly kind: "detached"; readonly commit: ObjectId }
+  | { readonly kind: "unborn"; readonly branch: string };
+
+/** A resolved branch reference. */
+export interface RepoGraphRef {
+  readonly name: string;
+  readonly fullName: string;
+  readonly target: ObjectId;
+}
+
+/** The whole commit DAG plus refs and HEAD — the read model for visualization. */
+export interface RepoGraph {
+  /** All commits reachable from any branch tip or HEAD, newest first. */
+  readonly commits: CommitLogEntry[];
+  readonly refs: RepoGraphRef[];
+  readonly head: HeadState;
+}
+
+/** Orders commit-log entries newest-first, with id as a stable tie-breaker. */
+function byNewestFirst(a: CommitLogEntry, b: CommitLogEntry): number {
+  return (
+    b.commit.timestamp - a.commit.timestamp || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0)
+  );
+}
+
 /** Options for {@link Repository.checkout}. */
 export interface CheckoutOptions {
   /** Discard conflicting local changes instead of refusing the checkout. */
@@ -184,11 +217,53 @@ export class Repository {
    */
   async log(): Promise<CommitLogEntry[]> {
     const head = await this.refs.resolveHead();
-    if (!head) return [];
+    return head ? this.collectHistory([head]) : [];
+  }
 
+  /**
+   * Builds the full read model for visualization: every commit reachable from
+   * any branch tip or HEAD, the resolved branch refs, and the HEAD state. This
+   * is the multi-root generalization of {@link log} (which seeds from HEAD only).
+   */
+  async graph(): Promise<RepoGraph> {
+    const refs: RepoGraphRef[] = [];
+    const roots = new Set<ObjectId>();
+
+    for (const name of await this.refs.listBranches()) {
+      const target = await this.refs.readBranch(name);
+      if (!target) continue; // skip a branch ref with no commit
+      refs.push({ name, fullName: branchRefName(name), target });
+      roots.add(target);
+    }
+
+    const head = await this.headState();
+    if (head.kind !== "unborn") roots.add(head.commit);
+
+    const commits = await this.collectHistory([...roots]);
+    return { commits, refs, head };
+  }
+
+  /** Derives the current {@link HeadState} from the ref store. */
+  private async headState(): Promise<HeadState> {
+    const head = await this.refs.getHead();
+    if (head?.kind === "direct") {
+      return { kind: "detached", commit: head.target };
+    }
+    // Symbolic (or, defensively, missing) → attached to a branch.
+    const branch = (await this.refs.currentBranch()) ?? DEFAULT_BRANCH;
+    const commit = await this.refs.resolveHead();
+    return commit ? { kind: "branch", branch, commit } : { kind: "unborn", branch };
+  }
+
+  /**
+   * Walks the commit DAG from the given roots, visiting each commit once, and
+   * returns the results newest-first. Multiple roots (branch tips) converge
+   * naturally because shared ancestors are deduplicated.
+   */
+  private async collectHistory(roots: ObjectId[]): Promise<CommitLogEntry[]> {
     const seen = new Set<string>();
     const entries: CommitLogEntry[] = [];
-    const stack: ObjectId[] = [head];
+    const stack = [...roots];
 
     while (stack.length > 0) {
       const id = stack.pop() as ObjectId;
@@ -206,11 +281,7 @@ export class Repository {
       }
     }
 
-    entries.sort(
-      (a, b) =>
-        b.commit.timestamp - a.commit.timestamp ||
-        (a.id < b.id ? 1 : a.id > b.id ? -1 : 0),
-    );
+    entries.sort(byNewestFirst);
     return entries;
   }
 

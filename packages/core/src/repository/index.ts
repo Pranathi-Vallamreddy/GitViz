@@ -5,4 +5,11 @@
  */
 
 export { GITVIZ_DIR_NAME, Repository } from "./repository.js";
-export type { CheckoutOptions, CheckoutResult, CommitLogEntry } from "./repository.js";
+export type {
+  CheckoutOptions,
+  CheckoutResult,
+  CommitLogEntry,
+  HeadState,
+  RepoGraph,
+  RepoGraphRef,
+} from "./repository.js";
