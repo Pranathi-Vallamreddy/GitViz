@@ -1,0 +1,26 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "corepack",
+      "runtimeArgs": ["pnpm@9.15.0", "--filter", "@gitviz/web", "exec", "vite"],
+      "port": 5173
+    },
+    {
+      "name": "server",
+      "runtimeExecutable": "corepack",
+      "runtimeArgs": [
+        "pnpm@9.15.0",
+        "--filter",
+        "@gitviz/server",
+        "exec",
+        "tsx",
+        "--conditions",
+        "development",
+        "src/index.ts"
+      ],
+      "port": 3000
+    }
+  ]
+}
