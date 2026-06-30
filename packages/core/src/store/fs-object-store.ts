@@ -6,7 +6,7 @@ import { deflate as deflateCb, inflate as inflateCb } from "node:zlib";
 
 import { CorruptObjectError, ObjectNotFoundError } from "../errors.js";
 import { hashBytes } from "../hash.js";
-import { asObjectId, type ObjectId } from "../object-id.js";
+import { asObjectId, OBJECT_ID_LENGTH, type ObjectId } from "../object-id.js";
 import { decodeObject, frameObject, serialize } from "../objects/object.js";
 import type { GitVizObject } from "../objects/types.js";
 import { writeFileAtomic } from "../util/fs.js";
@@ -131,6 +131,31 @@ export class FileSystemObjectStore implements ObjectStore {
   async has(id: ObjectId): Promise<boolean> {
     asObjectId(id);
     return existsSync(this.objectPath(id));
+  }
+
+  async resolveId(idOrPrefix: string): Promise<ObjectId | undefined> {
+    const prefix = idOrPrefix.toLowerCase();
+    if (!/^[0-9a-f]{4,64}$/.test(prefix)) return undefined;
+
+    if (prefix.length === OBJECT_ID_LENGTH) {
+      const id = asObjectId(prefix);
+      return (await this.has(id)) ? id : undefined;
+    }
+
+    // Prefix: the first two chars name the shard directory.
+    const shard = prefix.slice(0, FANOUT_PREFIX_LENGTH);
+    const rest = prefix.slice(FANOUT_PREFIX_LENGTH);
+    let entries: string[];
+    try {
+      entries = await fs.readdir(path.join(this.objectsDir, shard));
+    } catch (error) {
+      if (isErrnoException(error) && error.code === "ENOENT") return undefined;
+      throw error;
+    }
+    const matches = entries.filter(
+      (name) => !name.startsWith("tmp-") && name.startsWith(rest),
+    );
+    return matches.length === 1 ? asObjectId(shard + matches[0]) : undefined;
   }
 
   async count(): Promise<number> {

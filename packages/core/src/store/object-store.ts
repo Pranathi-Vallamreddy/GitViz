@@ -33,4 +33,11 @@ export interface ObjectStore {
 
   /** Total number of distinct objects currently stored. */
   count(): Promise<number>;
+
+  /**
+   * Resolves a full id or an unambiguous lowercase-hex prefix (>= 4 chars) to a
+   * stored object id. Returns undefined if nothing matches, or if a short prefix
+   * is ambiguous (matches more than one object).
+   */
+  resolveId(idOrPrefix: string): Promise<ObjectId | undefined>;
 }

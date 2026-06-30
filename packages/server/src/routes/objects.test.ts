@@ -55,6 +55,12 @@ describe("GET /api/objects/:hash", () => {
     });
   });
 
+  it("resolves an abbreviated hash prefix (Git-style)", async () => {
+    const res = await getObject(commitId.slice(0, 10));
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ type: "commit", id: commitId });
+  });
+
   it("returns 400 for an invalid hash", async () => {
     expect((await getObject("not-a-hash")).statusCode).toBe(400);
   });

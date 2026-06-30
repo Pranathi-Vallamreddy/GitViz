@@ -18,15 +18,23 @@ afterEach(async () => {
 });
 
 describe("seedDemoRepo", () => {
-  it("creates a branchy demo repository", async () => {
+  it("creates a branchy demo repository with a merge", async () => {
     await seedDemoRepo(dir);
 
     const repo = Repository.open(dir);
     const graph = await repo.graph();
 
-    expect(graph.commits.length).toBe(6);
-    expect(graph.refs.map((r) => r.name).sort()).toEqual(["feature/graph-api", "main"]);
+    expect(graph.commits.length).toBe(8);
+    expect(graph.refs.map((r) => r.name).sort()).toEqual([
+      "feature/graph-api",
+      "fix/store-edge-case",
+      "main",
+    ]);
     expect(graph.head).toMatchObject({ kind: "branch", branch: "main" });
+
+    // Exactly one merge commit (two parents).
+    const merges = graph.commits.filter((c) => c.commit.parents.length === 2);
+    expect(merges).toHaveLength(1);
   });
 
   it("is idempotent (leaves an existing repo untouched)", async () => {

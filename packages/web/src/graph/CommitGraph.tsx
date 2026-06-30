@@ -1,4 +1,5 @@
 import type { GraphDTO } from "@gitviz/shared";
+import { Box } from "@primer/react";
 import { useMemo } from "react";
 import ReactFlow, {
   Background,
@@ -11,14 +12,22 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 
 import { laneColor } from "./colors";
-import { CommitNode, COMMIT_NODE_WIDTH, type CommitNodeData } from "./CommitNode";
+import {
+  CommitNode,
+  COMMIT_NODE_HEIGHT,
+  COMMIT_NODE_WIDTH,
+  type CommitNodeData,
+} from "./CommitNode";
 import { layoutGraph } from "./layout";
 
 // Stable identity so React Flow doesn't re-register node types each render.
 const nodeTypes = { commit: CommitNode };
 
-const ROW_HEIGHT = 84;
-const COLUMN_WIDTH = COMMIT_NODE_WIDTH + 60;
+// Tight spacing for a dense graph: rows just taller than a node, lanes only a
+// little wider than a node so branches sit close together.
+const ROW_HEIGHT = 52;
+const COLUMN_WIDTH = COMMIT_NODE_WIDTH + 36;
+const NODE_HEIGHT = COMMIT_NODE_HEIGHT;
 
 interface CommitGraphProps {
   graph: GraphDTO;
@@ -43,6 +52,8 @@ export function CommitGraph({ graph, selectedId, onSelect }: CommitGraphProps) {
       id: n.id,
       type: "commit",
       position: { x: n.x, y: n.y },
+      width: COMMIT_NODE_WIDTH,
+      height: NODE_HEIGHT,
       data: {
         shortId: n.id.slice(0, 8),
         subject: n.commit.message.split("\n")[0] ?? "",
@@ -59,36 +70,41 @@ export function CommitGraph({ graph, selectedId, onSelect }: CommitGraphProps) {
       source: e.source,
       target: e.target,
       type: "smoothstep",
-      style: { stroke: colorById.get(e.source) ?? "#6e7681", strokeWidth: 2 },
+      pathOptions: { borderRadius: 14 },
+      style: { stroke: colorById.get(e.source) ?? "#6e7681", strokeWidth: 1.75 },
     }));
 
     return { nodes: rfNodes, edges: rfEdges };
   }, [graph, selectedId]);
 
+  // React Flow needs a parent with an explicit width and height to render.
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      fitView
-      fitViewOptions={{ padding: 0.25 }}
-      minZoom={0.2}
-      nodesDraggable={false}
-      nodesConnectable={false}
-      proOptions={{ hideAttribution: true }}
-      onNodeClick={(_event, node) => onSelect(node.id)}
-      onPaneClick={() => onSelect(null)}
-    >
-      <Background variant={BackgroundVariant.Dots} gap={20} color="#30363d" />
-      <Controls showInteractive={false} />
-      <MiniMap
-        pannable
-        zoomable
-        nodeColor={(n) => (n.data as CommitNodeData).color}
-        nodeStrokeColor={(n) => (n.data as CommitNodeData).color}
-        maskColor="rgba(1, 4, 9, 0.6)"
-        style={{ backgroundColor: "#161b22", border: "1px solid #30363d" }}
-      />
-    </ReactFlow>
+    <Box sx={{ width: "100%", height: "100%" }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        fitView
+        fitViewOptions={{ padding: 0.12, maxZoom: 1 }}
+        minZoom={0.2}
+        defaultEdgeOptions={{ type: "smoothstep" }}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        proOptions={{ hideAttribution: true }}
+        onNodeClick={(_event, node) => onSelect(node.id)}
+        onPaneClick={() => onSelect(null)}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={20} color="#30363d" />
+        <Controls showInteractive={false} />
+        <MiniMap
+          pannable
+          zoomable
+          nodeColor={(n) => (n.data as CommitNodeData).color}
+          nodeStrokeColor={(n) => (n.data as CommitNodeData).color}
+          maskColor="rgba(1, 4, 9, 0.6)"
+          style={{ backgroundColor: "#161b22", border: "1px solid #30363d" }}
+        />
+      </ReactFlow>
+    </Box>
   );
 }
