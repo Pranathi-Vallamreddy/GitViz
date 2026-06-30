@@ -94,6 +94,14 @@ describe("FileSystemObjectStore", () => {
     expect(await countFiles(objectsDir)).toBe(1);
   });
 
+  it("counts distinct stored objects", async () => {
+    expect(await store.count()).toBe(0);
+    await store.put(createBlob("a"));
+    await store.put(createBlob("b"));
+    await store.put(createBlob("a")); // dedup — not counted twice
+    expect(await store.count()).toBe(2);
+  });
+
   it("lays objects out as objects/<aa>/<rest>", async () => {
     const id = await store.put(createBlob("layout"));
     const file = path.join(gitvizDir, "objects", id.slice(0, 2), id.slice(2));

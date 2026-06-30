@@ -12,4 +12,5 @@ export type {
   HeadState,
   RepoGraph,
   RepoGraphRef,
+  RepoOverview,
 } from "./repository.js";

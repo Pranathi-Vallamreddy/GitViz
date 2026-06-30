@@ -1,5 +1,5 @@
-import type { CommitLogEntry, HeadState, RepoGraph } from "@gitviz/core";
-import type { CommitDTO, GraphDTO, HeadDTO } from "@gitviz/shared";
+import type { CommitLogEntry, HeadState, RepoGraph, RepoOverview } from "@gitviz/core";
+import type { CommitDTO, GraphDTO, HeadDTO, OverviewDTO } from "@gitviz/shared";
 
 /**
  * Maps engine read-model types to the JSON wire contract. Branded `ObjectId`s
@@ -38,5 +38,14 @@ export function toGraphDTO(graph: RepoGraph): GraphDTO {
       target: ref.target,
     })),
     head: toHeadDTO(graph.head),
+  };
+}
+
+export function toOverviewDTO(overview: RepoOverview): OverviewDTO {
+  return {
+    repoName: overview.repoName,
+    head: toHeadDTO(overview.head),
+    currentBranch: overview.currentBranch,
+    counts: { ...overview.counts },
   };
 }

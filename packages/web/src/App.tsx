@@ -1,30 +1,26 @@
-import { MarkGithubIcon } from "@primer/octicons-react";
-import { Box, Heading, Label, PageLayout, Text } from "@primer/react";
-import { GITVIZ_VERSION } from "@gitviz/shared";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+
+import { AppShell } from "./app/AppShell";
+import { RepoViewProvider } from "./app/RepoViewContext";
+import { NetworkPage } from "./pages/NetworkPage";
+import { OverviewPage } from "./pages/OverviewPage";
 
 /**
- * Application shell. Phase 0 renders a placeholder layout that establishes the
- * three-pane structure the real UI will fill in: commit graph, repository
- * explorer, and object inspector.
+ * Application root: client-side routing inside the repo shell. HashRouter keeps
+ * deep links working on static hosts (Vercel) without server rewrite rules.
  */
 export function App() {
   return (
-    <PageLayout>
-      <PageLayout.Header>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <MarkGithubIcon size={24} />
-          <Heading as="h1" sx={{ fontSize: 3 }}>
-            GitViz
-          </Heading>
-          <Label variant="accent">v{GITVIZ_VERSION}</Label>
-        </Box>
-      </PageLayout.Header>
-      <PageLayout.Content>
-        <Text>
-          Scaffold ready. The commit-graph visualization, repository explorer, and object
-          inspector will be built on top of this shell.
-        </Text>
-      </PageLayout.Content>
-    </PageLayout>
+    <RepoViewProvider>
+      <HashRouter>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route index element={<OverviewPage />} />
+            <Route path="network" element={<NetworkPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </HashRouter>
+    </RepoViewProvider>
   );
 }

@@ -132,4 +132,21 @@ export class FileSystemObjectStore implements ObjectStore {
     asObjectId(id);
     return existsSync(this.objectPath(id));
   }
+
+  async count(): Promise<number> {
+    let total = 0;
+    let shards: string[];
+    try {
+      shards = await fs.readdir(this.objectsDir);
+    } catch (error) {
+      if (isErrnoException(error) && error.code === "ENOENT") return 0;
+      throw error;
+    }
+    for (const shard of shards) {
+      const entries = await fs.readdir(path.join(this.objectsDir, shard));
+      // In-flight atomic writes leave `tmp-*` files; don't count them as objects.
+      total += entries.filter((name) => !name.startsWith("tmp-")).length;
+    }
+    return total;
+  }
 }

@@ -51,6 +51,18 @@ export interface RepoGraph {
   readonly head: HeadState;
 }
 
+/** A high-level repository summary (counts + HEAD), for an overview view. */
+export interface RepoOverview {
+  readonly repoName: string;
+  readonly head: HeadState;
+  readonly currentBranch: string | null;
+  readonly counts: {
+    readonly commits: number;
+    readonly branches: number;
+    readonly objects: number;
+  };
+}
+
 /** Orders commit-log entries newest-first, with id as a stable tie-breaker. */
 function byNewestFirst(a: CommitLogEntry, b: CommitLogEntry): number {
   return (
@@ -241,6 +253,23 @@ export class Repository {
 
     const commits = await this.collectHistory([...roots]);
     return { commits, refs, head };
+  }
+
+  /** Summarizes the repository: name, HEAD, current branch, and object counts. */
+  async overview(): Promise<RepoOverview> {
+    const graph = await this.graph();
+    const objects = await this.objects.count();
+    const currentBranch = (await this.refs.currentBranch()) ?? null;
+    return {
+      repoName: path.basename(this.workdir),
+      head: graph.head,
+      currentBranch,
+      counts: {
+        commits: graph.commits.length,
+        branches: graph.refs.length,
+        objects,
+      },
+    };
   }
 
   /** Derives the current {@link HeadState} from the ref store. */

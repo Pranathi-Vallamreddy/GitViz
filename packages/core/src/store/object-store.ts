@@ -30,4 +30,7 @@ export interface ObjectStore {
 
   /** Reports whether an object is stored under `id`. */
   has(id: ObjectId): Promise<boolean>;
+
+  /** Total number of distinct objects currently stored. */
+  count(): Promise<number>;
 }

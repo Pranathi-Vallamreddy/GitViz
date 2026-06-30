@@ -51,3 +51,20 @@ export interface GraphDTO {
   refs: RefDTO[];
   head: HeadDTO;
 }
+
+/** Repository summary for the overview header/page. */
+export interface OverviewDTO {
+  /** Display name (the repository directory's basename). */
+  repoName: string;
+  head: HeadDTO;
+  /** Current branch, or null when HEAD is detached. */
+  currentBranch: string | null;
+  counts: {
+    /** Reachable commits. */
+    commits: number;
+    /** Branch refs. */
+    branches: number;
+    /** Distinct stored content-addressed objects (blobs + trees + commits). */
+    objects: number;
+  };
+}
