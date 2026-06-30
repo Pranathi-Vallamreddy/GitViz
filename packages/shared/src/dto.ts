@@ -52,6 +52,43 @@ export interface GraphDTO {
   head: HeadDTO;
 }
 
+/** One entry of a tree object on the wire. */
+export interface TreeEntryDTO {
+  name: string;
+  type: "blob" | "tree";
+  /** Content hash of the referenced object. */
+  hash: string;
+}
+
+/**
+ * A content-addressed object, decoded for the inspector. The discriminant
+ * `type` makes the Merkle structure explicit: a commit points at a tree and
+ * parents, a tree points at blobs/sub-trees, a blob is leaf content.
+ */
+export type ObjectDTO =
+  | {
+      type: "commit";
+      id: string;
+      parents: string[];
+      author: { name: string; email: string };
+      timestamp: number;
+      message: string;
+      tree: string;
+    }
+  | { type: "tree"; id: string; entries: TreeEntryDTO[] }
+  | {
+      type: "blob";
+      id: string;
+      /** Total size of the blob in bytes. */
+      size: number;
+      /** How `content` is encoded: UTF-8 text, or base64 for binary. */
+      encoding: "utf8" | "base64";
+      /** The (possibly truncated) content in the given encoding. */
+      content: string;
+      /** True when `content` is only a prefix of a large blob. */
+      truncated: boolean;
+    };
+
 /** Repository summary for the overview header/page. */
 export interface OverviewDTO {
   /** Display name (the repository directory's basename). */

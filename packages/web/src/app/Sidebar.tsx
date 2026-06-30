@@ -1,4 +1,10 @@
-import { GitMergeIcon, RepoIcon, type Icon } from "@primer/octicons-react";
+import {
+  DatabaseIcon,
+  GitCommitIcon,
+  GitMergeIcon,
+  RepoIcon,
+  type Icon,
+} from "@primer/octicons-react";
 import { Box } from "@primer/react";
 import { NavLink } from "react-router-dom";
 
@@ -11,7 +17,9 @@ interface NavItem {
 
 const ITEMS: NavItem[] = [
   { to: "/", label: "Overview", icon: RepoIcon, end: true },
+  { to: "/commits", label: "History", icon: GitCommitIcon },
   { to: "/network", label: "Network", icon: GitMergeIcon },
+  { to: "/objects", label: "Objects", icon: DatabaseIcon },
 ];
 
 /** Left navigation rail (GitHub-style), with the active route highlighted. */

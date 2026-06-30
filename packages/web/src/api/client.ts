@@ -1,16 +1,22 @@
-import type { GraphDTO, OverviewDTO } from "@gitviz/shared";
+import type { GraphDTO, ObjectDTO, OverviewDTO } from "@gitviz/shared";
 
 /**
  * Thin fetch wrapper for the GitViz HTTP API.
  *
- * Requests are same-origin under `/api`; in development Vite proxies that prefix
- * to the Fastify server (see vite.config.ts), so no host is hardcoded here.
+ * In development, requests are same-origin under `/api` and Vite proxies them to
+ * the Fastify server (see vite.config.ts). In production set `VITE_API_URL` to
+ * the deployed API origin (e.g. https://gitviz-api.onrender.com) at build time.
  */
 
-const API_BASE = "/api";
+const API_BASE = `${import.meta.env.VITE_API_URL ?? ""}/api`;
 
 async function apiGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`);
+  } catch {
+    throw new Error("Cannot reach the GitViz API. Is the server running?");
+  }
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error ?? `Request failed (${response.status})`);
@@ -26,4 +32,9 @@ export function fetchGraph(): Promise<GraphDTO> {
 /** Fetches the repository overview (name, HEAD, current branch, counts). */
 export function fetchOverview(): Promise<OverviewDTO> {
   return apiGet<OverviewDTO>("/overview");
+}
+
+/** Fetches and decodes a content-addressed object (commit / tree / blob). */
+export function fetchObject(hash: string): Promise<ObjectDTO> {
+  return apiGet<ObjectDTO>(`/objects/${hash}`);
 }

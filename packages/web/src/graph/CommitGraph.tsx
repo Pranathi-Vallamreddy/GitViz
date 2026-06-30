@@ -1,4 +1,4 @@
-import { Box, Heading, Spinner, Text } from "@primer/react";
+import type { GraphDTO } from "@gitviz/shared";
 import { useMemo } from "react";
 import ReactFlow, {
   Background,
@@ -10,7 +10,6 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
-import { useGraph } from "../api/queries";
 import { laneColor } from "./colors";
 import { CommitNode, COMMIT_NODE_WIDTH, type CommitNodeData } from "./CommitNode";
 import { layoutGraph } from "./layout";
@@ -21,37 +20,20 @@ const nodeTypes = { commit: CommitNode };
 const ROW_HEIGHT = 84;
 const COLUMN_WIDTH = COMMIT_NODE_WIDTH + 60;
 
-/** Centers a message in the available space (loading / error / empty states). */
-function Centered({ children }: { children: React.ReactNode }) {
-  return (
-    <Box
-      sx={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 2,
-        color: "fg.muted",
-      }}
-    >
-      {children}
-    </Box>
-  );
+interface CommitGraphProps {
+  graph: GraphDTO;
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
 }
 
 /**
- * The commit-graph view: fetches `/api/graph`, runs the pure `layoutGraph`, and
- * renders the result with React Flow. Owns its own loading / error / empty
- * states and a Refresh control.
+ * Presentational commit-graph canvas. Given a {@link GraphDTO}, it runs the pure
+ * `layoutGraph` and renders the result with React Flow. Data fetching, branch
+ * filtering, and the detail panel live in the page that owns this component.
  */
-export function CommitGraph() {
-  const { data, isPending, isError, error } = useGraph();
-
+export function CommitGraph({ graph, selectedId, onSelect }: CommitGraphProps) {
   const { nodes, edges } = useMemo(() => {
-    if (!data) return { nodes: [] as Node<CommitNodeData>[], edges: [] as Edge[] };
-
-    const layout = layoutGraph(data, {
+    const layout = layoutGraph(graph, {
       rowHeight: ROW_HEIGHT,
       columnWidth: COLUMN_WIDTH,
     });
@@ -66,6 +48,7 @@ export function CommitGraph() {
         subject: n.commit.message.split("\n")[0] ?? "",
         author: n.commit.author.name,
         isHead: n.isHead,
+        selected: n.id === selectedId,
         refs: n.refs.map((r) => r.name),
         color: colorById.get(n.id)!,
       },
@@ -80,56 +63,32 @@ export function CommitGraph() {
     }));
 
     return { nodes: rfNodes, edges: rfEdges };
-  }, [data]);
+  }, [graph, selectedId]);
 
   return (
-    <Box sx={{ height: "100%", minHeight: 0 }}>
-      <Box sx={{ height: "100%" }}>
-        {isPending ? (
-          <Centered>
-            <Spinner />
-            <Text>Loading commit graph…</Text>
-          </Centered>
-        ) : isError ? (
-          <Centered>
-            <Text sx={{ color: "danger.fg" }}>Failed to load graph</Text>
-            <Text sx={{ fontSize: 0 }}>{error.message}</Text>
-          </Centered>
-        ) : nodes.length === 0 ? (
-          <Centered>
-            <Heading as="h2" sx={{ fontSize: 3, color: "fg.default" }}>
-              No commits yet
-            </Heading>
-            <Text>
-              Create one with <Text sx={{ fontFamily: "mono" }}>gitviz commit -m …</Text>,
-              then Refresh.
-            </Text>
-          </Centered>
-        ) : (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            fitView
-            fitViewOptions={{ padding: 0.25 }}
-            minZoom={0.2}
-            nodesDraggable={false}
-            nodesConnectable={false}
-            proOptions={{ hideAttribution: true }}
-          >
-            <Background variant={BackgroundVariant.Dots} gap={20} color="#30363d" />
-            <Controls showInteractive={false} />
-            <MiniMap
-              pannable
-              zoomable
-              nodeColor={(n) => (n.data as CommitNodeData).color}
-              nodeStrokeColor={(n) => (n.data as CommitNodeData).color}
-              maskColor="rgba(1, 4, 9, 0.6)"
-              style={{ backgroundColor: "#161b22", border: "1px solid #30363d" }}
-            />
-          </ReactFlow>
-        )}
-      </Box>
-    </Box>
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      nodeTypes={nodeTypes}
+      fitView
+      fitViewOptions={{ padding: 0.25 }}
+      minZoom={0.2}
+      nodesDraggable={false}
+      nodesConnectable={false}
+      proOptions={{ hideAttribution: true }}
+      onNodeClick={(_event, node) => onSelect(node.id)}
+      onPaneClick={() => onSelect(null)}
+    >
+      <Background variant={BackgroundVariant.Dots} gap={20} color="#30363d" />
+      <Controls showInteractive={false} />
+      <MiniMap
+        pannable
+        zoomable
+        nodeColor={(n) => (n.data as CommitNodeData).color}
+        nodeStrokeColor={(n) => (n.data as CommitNodeData).color}
+        maskColor="rgba(1, 4, 9, 0.6)"
+        style={{ backgroundColor: "#161b22", border: "1px solid #30363d" }}
+      />
+    </ReactFlow>
   );
 }

@@ -1,12 +1,13 @@
-import type { GraphDTO, OverviewDTO } from "@gitviz/shared";
+import type { GraphDTO, ObjectDTO, OverviewDTO } from "@gitviz/shared";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 
-import { fetchGraph, fetchOverview } from "./client";
+import { fetchGraph, fetchObject, fetchOverview } from "./client";
 
 /** Query keys, centralized so invalidation stays consistent. */
 export const queryKeys = {
   graph: ["graph"] as const,
   overview: ["overview"] as const,
+  object: (hash: string) => ["object", hash] as const,
 };
 
 /**
@@ -21,4 +22,16 @@ export function useGraph(): UseQueryResult<GraphDTO, Error> {
 /** Loads the repository overview (name, HEAD, current branch, counts). */
 export function useOverview(): UseQueryResult<OverviewDTO, Error> {
   return useQuery({ queryKey: queryKeys.overview, queryFn: fetchOverview });
+}
+
+/**
+ * Loads a single content-addressed object. Objects are immutable, so once
+ * fetched they never need refetching.
+ */
+export function useObject(hash: string): UseQueryResult<ObjectDTO, Error> {
+  return useQuery({
+    queryKey: queryKeys.object(hash),
+    queryFn: () => fetchObject(hash),
+    staleTime: Infinity,
+  });
 }

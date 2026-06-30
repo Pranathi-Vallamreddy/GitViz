@@ -7,10 +7,18 @@ export interface CommitNodeData {
   subject: string;
   author: string;
   isHead: boolean;
+  /** Whether this node is the currently selected one. */
+  selected: boolean;
   /** Branch short names pointing at this commit. */
   refs: string[];
   /** Lane color, used for the left accent stripe. */
   color: string;
+}
+
+function nodeShadow(data: CommitNodeData): string {
+  if (data.selected) return "0 0 0 2px var(--color-accent-emphasis)";
+  if (data.isHead) return "0 0 0 2px var(--color-attention-emphasis)";
+  return "var(--color-shadow-medium)";
 }
 
 export const COMMIT_NODE_WIDTH = 230;
@@ -31,9 +39,8 @@ export function CommitNode({ data }: NodeProps<CommitNodeData>) {
         borderRadius: 2,
         borderLeft: "4px solid",
         borderColor: data.isHead ? "attention.emphasis" : data.color,
-        boxShadow: data.isHead
-          ? "0 0 0 2px var(--color-attention-emphasis)"
-          : "shadow.medium",
+        boxShadow: nodeShadow(data),
+        cursor: "pointer",
         overflow: "hidden",
       }}
     >

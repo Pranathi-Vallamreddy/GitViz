@@ -11,6 +11,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 
 import { config } from "./config.js";
 import { graphRoutes } from "./routes/graph.js";
+import { objectRoutes } from "./routes/objects.js";
 import { overviewRoutes } from "./routes/overview.js";
 
 /**
@@ -56,6 +57,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Read-only repository API.
   await app.register(graphRoutes, { prefix: "/api" });
   await app.register(overviewRoutes, { prefix: "/api" });
+  await app.register(objectRoutes, { prefix: "/api" });
 
   return app;
 }

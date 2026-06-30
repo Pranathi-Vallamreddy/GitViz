@@ -1,5 +1,20 @@
-import type { CommitLogEntry, HeadState, RepoGraph, RepoOverview } from "@gitviz/core";
-import type { CommitDTO, GraphDTO, HeadDTO, OverviewDTO } from "@gitviz/shared";
+import type {
+  CommitLogEntry,
+  GitVizObject,
+  HeadState,
+  RepoGraph,
+  RepoOverview,
+} from "@gitviz/core";
+import type {
+  CommitDTO,
+  GraphDTO,
+  HeadDTO,
+  ObjectDTO,
+  OverviewDTO,
+} from "@gitviz/shared";
+
+/** Cap on inline blob content returned to the inspector (256 KiB). */
+const MAX_BLOB_BYTES = 256 * 1024;
 
 /**
  * Maps engine read-model types to the JSON wire contract. Branded `ObjectId`s
@@ -48,4 +63,49 @@ export function toOverviewDTO(overview: RepoOverview): OverviewDTO {
     currentBranch: overview.currentBranch,
     counts: { ...overview.counts },
   };
+}
+
+/** Heuristic: a NUL byte in the content marks the blob as binary. */
+function isBinary(data: Buffer): boolean {
+  return data.includes(0);
+}
+
+/** Maps a decoded engine object to its wire form (decoding blob bytes). */
+export function toObjectDTO(id: string, object: GitVizObject): ObjectDTO {
+  switch (object.type) {
+    case "commit":
+      return {
+        type: "commit",
+        id,
+        parents: [...object.parents],
+        author: { name: object.author.name, email: object.author.email },
+        timestamp: object.timestamp,
+        message: object.message,
+        tree: object.tree,
+      };
+    case "tree":
+      return {
+        type: "tree",
+        id,
+        entries: object.entries.map((e) => ({
+          name: e.name,
+          type: e.type,
+          hash: e.hash,
+        })),
+      };
+    case "blob": {
+      const size = object.data.length;
+      const truncated = size > MAX_BLOB_BYTES;
+      const slice = truncated ? object.data.subarray(0, MAX_BLOB_BYTES) : object.data;
+      const binary = isBinary(slice);
+      return {
+        type: "blob",
+        id,
+        size,
+        encoding: binary ? "base64" : "utf8",
+        content: slice.toString(binary ? "base64" : "utf8"),
+        truncated,
+      };
+    }
+  }
 }
