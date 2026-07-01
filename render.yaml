@@ -6,7 +6,7 @@ services:
     runtime: node
     plan: free
     # corepack provides the pinned pnpm; build compiles core+shared+server.
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @gitviz/server build
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @gitviz/server build
     startCommand: node packages/server/dist/index.js
     healthCheckPath: /health
     envVars:
