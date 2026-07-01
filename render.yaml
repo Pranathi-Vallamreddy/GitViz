@@ -5,8 +5,9 @@ services:
     name: gitviz-api
     runtime: node
     plan: free
-    # corepack provides the pinned pnpm; build compiles core+shared+server.
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @gitviz/server build
+    # NODE_ENV=production makes pnpm skip devDependencies (typescript, @types/node),
+    # so --prod=false forces them in for the build. Build compiles core+shared+server.
+    buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm --filter @gitviz/server build
     startCommand: node packages/server/dist/index.js
     healthCheckPath: /health
     envVars:
