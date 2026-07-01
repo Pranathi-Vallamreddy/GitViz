@@ -1,13 +1,55 @@
 # GitViz
 
-A **Git-inspired visual version control system**, built from scratch. GitViz
+[![CI](https://github.com/Pranathi-Vallamreddy/GitViz/actions/workflows/ci.yml/badge.svg)](https://github.com/Pranathi-Vallamreddy/GitViz/actions/workflows/ci.yml)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
+![Node](https://img.shields.io/badge/Node-%E2%89%A520-339933?logo=node.js&logoColor=white)
+![pnpm](https://img.shields.io/badge/pnpm-workspaces-f69220?logo=pnpm&logoColor=white)
+
+### **▶ [Live demo](https://gitviz-web.vercel.app)** &nbsp;·&nbsp; [API health](https://gitviz-api.onrender.com/health)
+
+> **Heads up:** the API runs on a free tier that sleeps when idle — the **first
+> request after a while can take ~40s to wake up**. Give it a moment on first load.
+
+A **Git-inspired visual version control system, built from scratch.** GitViz
 implements a real content-addressable object store (blobs / trees / commits keyed
 by SHA-256), a commit **DAG** with branching, checkout, and merge commits, and an
-interactive web UI — a GitHub/GitKraken-style client for exploring the repository,
+interactive web client — a GitHub/GitKraken-style tool for exploring a repository,
 its commit graph, and its content-addressed objects.
 
-> A from-scratch reimagining (not a fork), built to demonstrate systems design,
-> data structures, graph algorithms, and full-stack engineering.
+> A from-scratch reimagining, **not a fork of Git** — built to demonstrate systems
+> design, data structures, graph algorithms, and full-stack TypeScript engineering.
+
+---
+
+## Screenshots
+
+<!--
+  Placeholders — drop real images into docs/screenshots/ with these names and
+  they'll render here. A short GIF of the commit graph is the highest-impact one
+  for a reviewer skimming the page.
+-->
+
+|                    Commit graph (DAG)                    |                       Object inspector                       |
+| :-----------------------------------------------------: | :----------------------------------------------------------: |
+| ![Commit graph view](docs/screenshots/commit-graph.png) | ![Object inspector](docs/screenshots/object-inspector.png) |
+
+![Walkthrough](docs/screenshots/walkthrough.gif)
+
+---
+
+## Highlights
+
+- **A real Git-style engine, not a wrapper.** SHA-256 content addressing, a zlib
+  loose-object store with fan-out directories, dedup, and integrity checks —
+  written from first principles with **no I/O framework dependencies**.
+- **Commit DAG with branching & checkout.** Symbolic and detached `HEAD`, refs,
+  `writeTree`, `commit`, `log`, `graph`, and `checkout`.
+- **A custom graph layout engine.** Topological sort + lane assignment turns the
+  raw DAG into the drawn commit graph — no off-the-shelf graph-layout library.
+- **One engine, three front doors.** The same framework-free core powers a CLI, a
+  REST API, and a React web client.
+- **Typed end-to-end & tested.** Strict TypeScript across every package with
+  ~100 passing unit tests (vitest), enforced in CI.
 
 ## Architecture
 
@@ -79,5 +121,6 @@ of Render, a `Dockerfile` is included.
 
 ## Status
 
-Feature-complete engine, REST API, CLI, and web client with ~100 passing tests.
+Feature-complete engine, REST API, CLI, and web client with ~100 passing tests,
+verified in CI on every push and pull request.
 Not implemented (by design): diffs, remotes/push/pull, and multi-repo.
