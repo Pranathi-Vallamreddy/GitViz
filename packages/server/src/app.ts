@@ -27,7 +27,13 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
   });
 
-  await app.register(cors, { origin: config.CORS_ORIGIN });
+  // CORS: "*" (public demo), a single origin, or a comma-separated allowlist
+  // (e.g. a Vercel production + preview domain).
+  const corsOrigin =
+    config.CORS_ORIGIN === "*"
+      ? true
+      : config.CORS_ORIGIN.split(",").map((o) => o.trim());
+  await app.register(cors, { origin: corsOrigin });
 
   // Map known engine errors to appropriate HTTP statuses.
   app.setErrorHandler((error, _request, reply) => {

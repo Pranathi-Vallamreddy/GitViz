@@ -1,0 +1,21 @@
+# Render Blueprint for the GitViz API (native Node, no Docker required).
+# Import this repo at https://render.com → New → Blueprint.
+services:
+  - type: web
+    name: gitviz-api
+    runtime: node
+    plan: free
+    # corepack provides the pinned pnpm; build compiles core+shared+server.
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @gitviz/server build
+    startCommand: node packages/server/dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Writable path on Render; the API auto-seeds a demo repo here on boot.
+      - key: GITVIZ_REPO
+        value: /tmp/gitviz-demo
+      # Allow the deployed web origin. "*" is fine for a public read-only demo;
+      # tighten to your Vercel URL if you prefer.
+      - key: CORS_ORIGIN
+        value: "*"

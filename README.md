@@ -1,62 +1,83 @@
 # GitViz
 
-A **Git-inspired visual version control system**. GitViz implements a real
-content-addressable object store (blobs / trees / commits keyed by hash), a
-commit **DAG** with branching and checkout, and an interactive web UI for
-exploring repositories, visualizing the commit graph, and inspecting objects.
+A **Git-inspired visual version control system**, built from scratch. GitViz
+implements a real content-addressable object store (blobs / trees / commits keyed
+by SHA-256), a commit **DAG** with branching, checkout, and merge commits, and an
+interactive web UI — a GitHub/GitKraken-style client for exploring the repository,
+its commit graph, and its content-addressed objects.
 
-> This repository is a from-scratch reimagining — not a fork — built to
-> demonstrate systems design, data structures, graph algorithms, and full-stack
-> engineering.
-
-## Status
-
-**Phase 0 — scaffold.** The monorepo, toolchain, and package boundaries are in
-place. No version-control logic has been implemented yet (see the roadmap).
+> A from-scratch reimagining (not a fork), built to demonstrate systems design,
+> data structures, graph algorithms, and full-stack engineering.
 
 ## Architecture
 
-A TypeScript monorepo managed with **pnpm workspaces** and **TypeScript project
-references**.
+A TypeScript monorepo (pnpm workspaces + project references):
 
 ```
 gitviz/
 ├─ packages/
-│  ├─ shared/   @gitviz/shared  — framework-agnostic types shared across all packages
-│  ├─ core/     @gitviz/core    — the VCS engine (object store, DAG, diff). No I/O frameworks.
-│  ├─ server/   @gitviz/server  — Fastify API exposing the engine + Postgres metadata
-│  └─ web/      @gitviz/web     — React + Vite UI (commit graph, explorer, inspector)
+│  ├─ shared/   @gitviz/shared  — framework-agnostic types & API DTOs
+│  ├─ core/     @gitviz/core    — the VCS engine (object store, refs, DAG). No I/O frameworks.
+│  ├─ server/   @gitviz/server  — Fastify read-only REST API over the engine
+│  └─ web/      @gitviz/web     — React + Vite + Primer + React Flow client
 └─ apps/
-   └─ cli/      @gitviz/cli     — `gitviz` command-line wrapper around the engine
+   └─ cli/      @gitviz/cli     — the `gitviz` command-line client
 ```
 
-**Dependency direction:** `shared` ← `core` ← (`server`, `cli`); `web` depends on
-`shared` only. The engine (`core`) never imports a web or server framework, so it
-stays unit-testable and reusable from both the API and the CLI.
+**Engine** (`core`): SHA-256 content addressing, zlib loose-object store with
+fan-out + dedup + integrity checks, refs/HEAD (symbolic & detached), `writeTree`,
+`commit`, `log`, `graph`, and `checkout`. Fully unit-tested; never imports a web
+or server framework.
+
+**API** (`server`, read-only): `GET /health`, `/api/overview`, `/api/graph`,
+`/api/objects/:hash` (accepts abbreviated hashes). Points at one repository via
+`GITVIZ_REPO` and auto-seeds a demo repo if empty.
+
+**Web** (`web`): a custom DAG layout engine (topological sort + lane assignment)
+feeding React Flow, plus Overview / History / Network / Objects views.
 
 ## Prerequisites
 
 - Node.js >= 20 (developed on 22)
-- pnpm 9 (`corepack enable pnpm`, or run via `corepack pnpm@9.15.0 <cmd>`)
+- pnpm 9 — `corepack enable pnpm` (or run any command via `corepack pnpm@9.15.0 …`)
 
-## Getting started
+## Run locally
 
 ```bash
-pnpm install        # install all workspaces
-pnpm typecheck      # tsc -b across all node packages
-pnpm lint           # eslint
-pnpm test           # vitest
-pnpm build          # build every package
+pnpm install
+pnpm test          # engine + layout tests (vitest)
+pnpm build         # build every package
 
-pnpm dev:server     # run the Fastify API in watch mode
-pnpm dev:web        # run the Vite dev server
-pnpm cli -- --help  # run the CLI
+# Two terminals:
+GITVIZ_REPO="$HOME/gitviz-demo" pnpm dev:server   # API on :3000 (auto-seeds a demo repo)
+pnpm dev:web                                       # web on :5173 (proxies /api → :3000)
 ```
 
-## Roadmap
+Open **http://localhost:5173**. Point the API at a real repo by setting
+`GITVIZ_REPO` to any folder you've run `gitviz init` / `gitviz commit` in (and set
+`GITVIZ_SEED=false` to skip the demo seed). Try the CLI with `pnpm cli -- --help`.
 
-- **Phase 0** ✅ Monorepo scaffold & toolchain
-- **Phase 1** Core engine: object model, hashing, store, refs/HEAD, writeTree, commit, log, branch, checkout
-- **Phase 2** Tree + line (Myers/LCS) diff; Fastify API; Postgres metadata; seed
-- **Phase 3** Web UI: commit-graph visualization, repository explorer, object inspector, branch management
-- **Phase 4** Polish: docs, deploy, design write-up
+## Deploy
+
+Web on **Vercel**, API on **Render** (both free tiers, no Docker needed). Configs
+are checked in (`vercel.json`, `render.yaml`).
+
+**1. Push to GitHub** (already the `origin` remote).
+
+**2. API → Render.** New → **Blueprint** → pick this repo. `render.yaml` provisions
+a Node web service that builds the engine + server and auto-seeds a demo repo.
+Copy its URL, e.g. `https://gitviz-api.onrender.com`, and confirm
+`https://…/health` returns `{"status":"ok"}`.
+
+**3. Web → Vercel.** New Project → import this repo (Vercel reads `vercel.json`).
+Add an environment variable **`VITE_API_URL`** = the Render URL from step 2, then
+deploy. Open the Vercel URL — it will load the demo repo from your API.
+
+CORS defaults to `*` for a public read-only demo; tighten `CORS_ORIGIN` on Render
+to your Vercel domain if you prefer. For a container host (Fly.io/Railway) instead
+of Render, a `Dockerfile` is included.
+
+## Status
+
+Feature-complete engine, REST API, CLI, and web client with ~100 passing tests.
+Not implemented (by design): diffs, remotes/push/pull, and multi-repo.

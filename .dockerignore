@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+.git
+**/.gitviz
+**/.gitviz-data
+demo-repo
+coverage
+.vercel
+.claude
+*.log
