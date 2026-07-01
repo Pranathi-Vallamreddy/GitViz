@@ -7,6 +7,6 @@ render automatically — no README edits needed.
 | ----------------------- | ----------------------------------------------------------- |
 | `commit-graph.png`      | The commit graph / DAG view with a few branches visible.    |
 | `object-inspector.png`  | The object inspector showing a commit or tree's contents.   |
-<!-- walkthrough.gif moved to assets/ or removed from README -->
+
 
 

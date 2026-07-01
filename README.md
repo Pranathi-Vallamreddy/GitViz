@@ -21,8 +21,6 @@ its commit graph, and its content-addressed objects.
 
 ---
 
-🎥 **Watch the Demo:** [IncidentIQ Demo](assets/demo.mp4)
-
 ## Screenshots
 
 <!--
@@ -34,10 +32,6 @@ its commit graph, and its content-addressed objects.
 |                    Commit graph (DAG)                    |                       Object inspector                       |
 | :-----------------------------------------------------: | :----------------------------------------------------------: |
 | ![Commit graph view](docs/screenshots/commit-graph.png) | ![Object inspector](docs/screenshots/object-inspector.png) |
-
-<!-- walkthrough moved to assets/walkthrough.mp4 -->
-
-
 
 ## Highlights
 
